@@ -31,30 +31,32 @@ public class CategoryController {
 //        this.categoryService = categoryService;
 //    }
 
-    //@GetMapping("/api/public/categories")
-    @RequestMapping(value = "/public/categories", method = RequestMethod.GET)
-    public ResponseEntity<CategoryResponse> getAllCategories() {
-        CategoryResponse categoryResponse = categoryService.getAllCategories();
+    @GetMapping("/public/categories")
+    //@RequestMapping(value = "/public/categories", method = RequestMethod.GET)
+    public ResponseEntity<CategoryResponse> getAllCategories(@RequestParam (name = "pageNumber") Integer pageNumber,
+                                                             @RequestParam (name = "pageSize") Integer pageSize ) {
+
+        CategoryResponse categoryResponse = categoryService.getAllCategories(pageNumber, pageSize);
         return new ResponseEntity<>(categoryResponse, HttpStatus.OK);
     }
 
-    //@PostMapping("/api/public/categories")
-    @RequestMapping(value = "/public/categories", method = RequestMethod.POST)
+    @PostMapping("/public/categories")
+    //@RequestMapping(value = "/public/categories", method = RequestMethod.POST)
     public ResponseEntity<CategoryDTO> createCategory(@Valid @RequestBody CategoryDTO categoryDTO) {
         CategoryDTO savedCategoryDTO = categoryService.createCategory(categoryDTO);
         return new ResponseEntity<>(savedCategoryDTO, HttpStatus.CREATED);
     }
 
-    //@DeleteMapping("/api/admin/categories/{categoryId}")
-    @RequestMapping(value = "/admin/categories/{categoryId}", method = RequestMethod.DELETE)
+    @DeleteMapping("/admin/categories/{categoryId}")
+    //@RequestMapping(value = "/admin/categories/{categoryId}", method = RequestMethod.DELETE)
     public ResponseEntity<CategoryDTO> deleteCategory(@PathVariable Long categoryId){
         CategoryDTO deletedCategory = categoryService.deleteCategory(categoryId);
         return new ResponseEntity<>(deletedCategory, HttpStatus.OK);
 
     }
 
-    //@PutMapping("/api/public/categories/{categoryId}")
-    @RequestMapping(value = "/public/categories/{categoryId}", method = RequestMethod.PUT)
+    @PutMapping("/public/categories/{categoryId}")
+    //@RequestMapping(value = "/public/categories/{categoryId}", method = RequestMethod.PUT)
     public ResponseEntity<CategoryDTO> updateCategory(@Valid @RequestBody CategoryDTO categoryDTO, @PathVariable long categoryId) {
 
 

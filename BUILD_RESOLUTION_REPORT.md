@@ -479,18 +479,237 @@ public class CategoryDTO {
 
 ---
 
+## Update: December 20, 2025 - 18:50 IST - Get Products By Category Endpoint Fix
+
+### Scenario: 404 Not Found Error on Category Products Endpoint
+
+**Issue Reported:**
+Testing the "Get Products By Category" endpoint resulted in 404 Not Found errors:
+- Testing `GET /api/public/categories/1/products` → 404 Not Found
+- Testing `GET /api/public/categories/2/products` → 404 Not Found
+- However, `GET /api/public/products` worked correctly and returned products with category information
+
+**Root Cause Analysis:**
+1. **URL Path Mismatch:** ProductController had `/api/public/category/{categoryId}/products` (singular) but the expected REST convention uses `/api/public/categories/{categoryId}/products` (plural)
+2. **Missing Category Mapping:** Both `getAllProducts()` and `searchByCategory()` methods in ProductServiceImpl were not mapping category information (categoryId and categoryName) to ProductDTO, even though the data existed
+
+**Error Details:**
+```json
+{
+    "timestamp": "2025-12-20T13:18:35.729+00:00",
+    "status": 404,
+    "error": "Not Found",
+    "path": "/api/public/categories/1/products"
+}
+```
+
+---
+
+### 7. ProductController URL Path Fix
+
+**Problem:**
+The controller endpoint used singular "category" instead of plural "categories", breaking REST API naming conventions and causing 404 errors.
+
+**Resolution:**
+
+#### Change: Fixed ProductController Endpoint Path
+```java
+// File: ProductController.java
+// BEFORE (Incorrect - singular)
+@GetMapping("/api/public/category/{categoryId}/products")
+public ResponseEntity<ProductResponse> getProductsByCategory(@PathVariable Long categoryId)
+
+// AFTER (Fixed - plural, consistent with other endpoints)
+@GetMapping("/api/public/categories/{categoryId}/products")
+public ResponseEntity<ProductResponse> getProductsByCategory(@PathVariable Long categoryId)
+```
+
+**File Modified:** `src/main/java/com/ecommerce/project/controller/ProductController.java`
+
+---
+
+### 8. ProductServiceImpl Category Mapping Enhancement
+
+**Problem:**
+While the `addProduct()` method correctly mapped category information to ProductDTO, the `getAllProducts()` and `searchByCategory()` methods were not including categoryId and categoryName in their responses.
+
+**Resolution:**
+
+#### Change 1: Enhanced getAllProducts() Method
+```java
+// File: ProductServiceImpl.java
+// BEFORE
+@Override
+public ProductResponse getAllProducts() {
+    List<Product> products = productRepository.findAll();
+    List<ProductDTO> productDTOS = products.stream()
+            .map(product -> modelMapper.map(product, ProductDTO.class))
+            .collect(Collectors.toList());
+    
+    ProductResponse productResponse = new ProductResponse();
+    productResponse.setContent(productDTOS);
+    return productResponse;
+}
+
+// AFTER (Fixed - includes category information)
+@Override
+public ProductResponse getAllProducts() {
+    List<Product> products = productRepository.findAll();
+    List<ProductDTO> productDTOS = products.stream()
+            .map(product -> {
+                ProductDTO dto = modelMapper.map(product, ProductDTO.class);
+                dto.setCategoryId(product.getCategory().getCategoryId());
+                dto.setCategoryName(product.getCategory().getCategoryName());
+                return dto;
+            })
+            .collect(Collectors.toList());
+    
+    ProductResponse productResponse = new ProductResponse();
+    productResponse.setContent(productDTOS);
+    return productResponse;
+}
+```
+
+#### Change 2: Enhanced searchByCategory() Method
+```java
+// File: ProductServiceImpl.java
+// BEFORE
+@Override
+public ProductResponse searchByCategory(Long categoryId) {
+    Category category = categoryRepository.findById(categoryId)
+            .orElseThrow(() ->
+                    new ResourceNotFoundException("Category", "categoryId", categoryId));
+    
+    List<Product> products = productRepository.findByCategoryOrderByPriceAsc(category);
+    List<ProductDTO> productDTOS = products.stream()
+            .map(product -> modelMapper.map(product, ProductDTO.class))
+            .collect(Collectors.toList());
+    
+    ProductResponse productResponse = new ProductResponse();
+    productResponse.setContent(productDTOS);
+    return productResponse;
+}
+
+// AFTER (Fixed - includes category information)
+@Override
+public ProductResponse searchByCategory(Long categoryId) {
+    Category category = categoryRepository.findById(categoryId)
+            .orElseThrow(() ->
+                    new ResourceNotFoundException("Category", "categoryId", categoryId));
+    
+    List<Product> products = productRepository.findByCategoryOrderByPriceAsc(category);
+    List<ProductDTO> productDTOS = products.stream()
+            .map(product -> {
+                ProductDTO dto = modelMapper.map(product, ProductDTO.class);
+                dto.setCategoryId(category.getCategoryId());
+                dto.setCategoryName(category.getCategoryName());
+                return dto;
+            })
+            .collect(Collectors.toList());
+    
+    ProductResponse productResponse = new ProductResponse();
+    productResponse.setContent(productDTOS);
+    return productResponse;
+}
+```
+
+**Files Modified:**
+- `src/main/java/com/ecommerce/project/service/ProductServiceImpl.java`
+
+---
+
+### Testing Scenarios After Fix
+
+✅ **Scenario 1: Get All Products**
+```http
+GET http://localhost:8080/api/public/products
+
+Response: 200 OK
+{
+    "content": [
+        {
+            "productId": 1,
+            "productName": "Adjustable dumbbell set...",
+            "categoryId": 1,
+            "categoryName": "Travels"
+        }
+    ]
+}
+```
+
+✅ **Scenario 2: Get Products By Category (Category Exists)**
+```http
+GET http://localhost:8080/api/public/categories/1/products
+
+Response: 200 OK
+{
+    "content": [
+        {
+            "productId": 1,
+            "productName": "Adjustable dumbbell set...",
+            "categoryId": 1,
+            "categoryName": "Travels"
+        }
+    ]
+}
+```
+
+✅ **Scenario 3: Get Products By Category (Category Not Found)**
+```http
+GET http://localhost:8080/api/public/categories/999/products
+
+Response: 404 Not Found
+{
+    "message": "Category not found with categoryId: 999",
+    "status": false
+}
+```
+
+✅ **Scenario 4: Get Products By Category (Empty Category)**
+```http
+GET http://localhost:8080/api/public/categories/2/products
+
+Response: 200 OK
+{
+    "content": []
+}
+```
+
+---
+
+### Benefits of Changes
+
+1. ✅ **Consistent URL Naming:** All endpoints now use plural "categories" for consistency
+2. ✅ **Complete Data:** All product endpoints now return category information
+3. ✅ **REST Compliance:** Follows RESTful API naming conventions
+4. ✅ **Better User Experience:** Client applications receive all necessary data in one call
+5. ✅ **Uniform Behavior:** All ProductService methods now behave consistently
+
+**Build Status After Changes:**
+```
+[INFO] BUILD SUCCESS
+[INFO] Total time: 9.484 s
+[INFO] Finished at: 2025-12-20T18:50:59+05:30
+```
+
+---
+
 ## Summary of All Changes (December 20, 2025)
 
-| # | File | Module | Change Description | Impact |
-|---|------|--------|-------------------|--------|
-| 1 | Category.java | Model | Added @OneToMany relationship | Module Integration |
-| 2 | ProductDTO.java | Payload | Added categoryId, categoryName, description | Data Completeness |
-| 3 | ProductServiceImpl.java | Service | Enhanced DTO mapping with category | API Response |
-| 4 | data.sql | Resources | Commented initial data | Testing |
-| 5 | CategoryDTO.java | Payload | Added validation annotations | Data Validation |
-| 6 | CategoryRepository.java | Repository | Cleaned method signature | Code Quality |
+| # | File | Module | Change Description | Impact | Time |
+|---|------|--------|-------------------|--------|------|
+| 1 | Category.java | Model | Added @OneToMany relationship | Module Integration | 16:20 |
+| 2 | ProductDTO.java | Payload | Added categoryId, categoryName, description | Data Completeness | 16:20 |
+| 3 | ProductServiceImpl.java | Service | Enhanced DTO mapping with category (addProduct) | API Response | 16:20 |
+| 4 | data.sql | Resources | Commented initial data | Testing | 16:20 |
+| 5 | CategoryDTO.java | Payload | Added validation annotations | Data Validation | 16:07 |
+| 6 | CategoryRepository.java | Repository | Cleaned method signature | Code Quality | 16:07 |
+| 7 | ProductController.java | Controller | Fixed URL path (category → categories) | REST Compliance | 18:50 |
+| 8 | ProductServiceImpl.java | Service | Enhanced getAllProducts() mapping | Data Completeness | 18:50 |
+| 9 | ProductServiceImpl.java | Service | Enhanced searchByCategory() mapping | Data Completeness | 18:50 |
+| 10 | application.properties | Config | Changed SQL init mode to never | Testing | 16:24 |
 
-**Total Changes Today:** 6 files modified  
-**Status:** ✅ All modules properly interlinked and functional
+**Total Changes Today:** 10 modifications across 8 files  
+**Status:** ✅ All product endpoints functional with complete data
 
 ---

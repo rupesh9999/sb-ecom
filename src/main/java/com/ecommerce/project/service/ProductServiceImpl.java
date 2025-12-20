@@ -53,7 +53,12 @@ public class ProductServiceImpl implements ProductService {
     public ProductResponse getAllProducts() {
         List<Product> products = productRepository.findAll();
         List<ProductDTO> productDTOS = products.stream()
-                .map(product -> modelMapper.map(product, ProductDTO.class))
+                .map(product -> {
+                    ProductDTO dto = modelMapper.map(product, ProductDTO.class);
+                    dto.setCategoryId(product.getCategory().getCategoryId());
+                    dto.setCategoryName(product.getCategory().getCategoryName());
+                    return dto;
+                })
                 .collect(Collectors.toList());
 
         ProductResponse productResponse = new ProductResponse();
@@ -69,7 +74,12 @@ public class ProductServiceImpl implements ProductService {
 
         List<Product> products = productRepository.findByCategoryOrderByPriceAsc(category);
         List<ProductDTO> productDTOS = products.stream()
-                .map(product -> modelMapper.map(product, ProductDTO.class))
+                .map(product -> {
+                    ProductDTO dto = modelMapper.map(product, ProductDTO.class);
+                    dto.setCategoryId(category.getCategoryId());
+                    dto.setCategoryName(category.getCategoryName());
+                    return dto;
+                })
                 .collect(Collectors.toList());
 
         ProductResponse productResponse = new ProductResponse();

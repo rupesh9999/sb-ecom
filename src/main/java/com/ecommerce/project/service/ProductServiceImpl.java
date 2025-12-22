@@ -89,7 +89,7 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public ProductResponse searchProductByKeyword(String keyword) {
-        List<Product> products = productRepository.findByProductNameLikeIgnoreCase(keyword);
+        List<Product> products = productRepository.findByProductNameLikeIgnoreCase('%' + keyword + '%');
         List<ProductDTO> productDTOS = products.stream()
                 .map(product -> modelMapper.map(product, ProductDTO.class))
                 .toList();
@@ -97,6 +97,37 @@ public class ProductServiceImpl implements ProductService {
         ProductResponse productResponse = new ProductResponse();
         productResponse.setContent(productDTOS);
         return productResponse;
+    }
+
+    @Override
+    public ProductDTO updateProduct(Product product, Long productId) {
+        // Get the existing product from DB
+        Product productFromDb = productRepository.findById(productId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Product", "productId", productId));
+
+        // UPDATE The product info with the one in request body
+        productFromDb.setProductName(product.getProductName());
+        productFromDb.setDescription(product.getDescription());
+        productFromDb.setQuantity(product.getQuantity());
+        productFromDb.setPrice(product.getPrice());
+        productFromDb.setDiscount(product.getDiscount());
+        productFromDb.setSpecialPrice(product.getSpecialPrice());
+
+        Product savedProduct = productRepository.save(productFromDb);
+        return modelMapper.map(savedProduct, ProductDTO.class);
+
+
+        // save to database
+
+    }
+
+    @Override
+    public ProductDTO deleteProduct(Long productId) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new ResourceNotFoundException("Product", "productId", productId));
+        productRepository.delete(product);
+        return modelMapper.map(product, ProductDTO.class);
     }
 
 }

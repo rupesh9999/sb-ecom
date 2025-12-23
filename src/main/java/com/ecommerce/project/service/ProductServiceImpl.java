@@ -1,6 +1,7 @@
 package com.ecommerce.project.service;
 
 
+import com.ecommerce.project.exceptions.APIException;
 import com.ecommerce.project.exceptions.ResourceNotFoundException;
 import com.ecommerce.project.model.Category;
 import com.ecommerce.project.model.Product;
@@ -49,19 +50,36 @@ public class ProductServiceImpl implements ProductService {
                 .orElseThrow(() ->
                         new ResourceNotFoundException("Category", "categoryId", categoryId));
 
-        Product product = modelMapper.map(productDTO, Product.class);
-        product.setImage("default.png");
-        product.setCategory(category);
-        double specialPrice = product.getPrice() - ((product.getDiscount() * 0.01) * product.getPrice());
-        product.setSpecialPrice(specialPrice);
-        Product savedProduct = productRepository.save(product);
+        boolean ifProductNotPresent = true;
 
-        // Map to DTO and include category information
-        productDTO = modelMapper.map(savedProduct, ProductDTO.class);
-        productDTO.setCategoryId(category.getCategoryId());
-        productDTO.setCategoryName(category.getCategoryName());
+        List<Product> products = category.getProducts();
+        for (Product value : products){
+            if (value.getProductName().equals(productDTO.getProductName())){
+                ifProductNotPresent = false;
+                break;
+            }
+        }
 
-        return productDTO;
+        if (ifProductNotPresent){
+
+            Product product = modelMapper.map(productDTO, Product.class);
+            product.setImage("default.png");
+            product.setCategory(category);
+            double specialPrice = product.getPrice() - ((product.getDiscount() * 0.01) * product.getPrice());
+            product.setSpecialPrice(specialPrice);
+            Product savedProduct = productRepository.save(product);
+
+            // Map to DTO and include category information
+            //productDTO = modelMapper.map(savedProduct, ProductDTO.class);
+            //productDTO.setCategoryId(category.getCategoryId());
+            //productDTO.setCategoryName(category.getCategoryName());
+
+            //return productDTO;
+            return modelMapper.map(savedProduct, ProductDTO.class);
+
+        } else {
+            throw new APIException("Product already exists!!");
+        }
     }
 
     @Override
@@ -75,6 +93,10 @@ public class ProductServiceImpl implements ProductService {
                     return dto;
                 })
                 .collect(Collectors.toList());
+
+        if (products.isEmpty()){
+            throw new APIException("No products found matching the specified criteria");
+        }
 
         ProductResponse productResponse = new ProductResponse();
         productResponse.setContent(productDTOS);

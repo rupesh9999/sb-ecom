@@ -154,7 +154,6 @@ public class ProductServiceImpl implements ProductService {
 
         List<Product> products = pageProducts.getContent();
 
-        List<Product> products = productRepository.findByProductNameLikeIgnoreCase('%' + keyword + '%', pageDetails);
         List<ProductDTO> productDTOS = products.stream()
                 .map(product -> modelMapper.map(product, ProductDTO.class))
                 .toList();

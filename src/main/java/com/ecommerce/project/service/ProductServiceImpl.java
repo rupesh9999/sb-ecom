@@ -101,11 +101,6 @@ public class ProductServiceImpl implements ProductService {
                 .collect(Collectors.toList());
 
 
-
-        //if (products.isEmpty()){
-        //    throw new APIException("No products found matching the specified criteria");
-        //}
-
         ProductResponse productResponse = new ProductResponse();
         productResponse.setContent(productDTOS);
         productResponse.setPageNo(pageProducts.getNumber());
@@ -140,18 +135,38 @@ public class ProductServiceImpl implements ProductService {
                 .collect(Collectors.toList());
 
         ProductResponse productResponse = new ProductResponse();
+        productResponse.setPageNo(pageProducts.getNumber());
+        productResponse.setPageSize(pageProducts.getSize());
+        productResponse.setTotalElements(pageProducts.getTotalElements());
+        productResponse.setTotalPages(pageProducts.getTotalPages());
+        productResponse.setLastPage(pageProducts.isLast());
         productResponse.setContent(productDTOS);
         return productResponse;
     }
 
     @Override
     public ProductResponse searchProductByKeyword(String keyword, int pageNo, int pageSize, String sortBy, String sortDir) {
-        List<Product> products = productRepository.findByProductNameLikeIgnoreCase('%' + keyword + '%');
+        Sort sortByAndOrder = sortDir.equalsIgnoreCase("asc")
+                ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
+
+        Pageable pageDetails = PageRequest.of(pageNo, pageSize, sortByAndOrder);
+        Page<Product> pageProducts = productRepository.findByProductNameLikeIgnoreCase('%' + keyword + '%', pageDetails);
+
+        List<Product> products = pageProducts.getContent();
+
+        List<Product> products = productRepository.findByProductNameLikeIgnoreCase('%' + keyword + '%', pageDetails);
         List<ProductDTO> productDTOS = products.stream()
                 .map(product -> modelMapper.map(product, ProductDTO.class))
                 .toList();
 
+
+
         ProductResponse productResponse = new ProductResponse();
+        productResponse.setPageNo(pageProducts.getNumber());
+        productResponse.setPageSize(pageProducts.getSize());
+        productResponse.setTotalElements(pageProducts.getTotalElements());
+        productResponse.setTotalPages(pageProducts.getTotalPages());
+        productResponse.setLastPage(pageProducts.isLast());
         productResponse.setContent(productDTOS);
         return productResponse;
     }

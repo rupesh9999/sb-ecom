@@ -63,6 +63,7 @@ public class WebSecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authRequests -> authRequests.requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/v3/api-docs/**").permitAll()
+                        .requestMatchers("/h2-console/**").permitAll()
                         .requestMatchers("/swagger-ui/**").permitAll()
                         .requestMatchers("/api/public/**").permitAll()
                         .requestMatchers("/api/admin/**").permitAll()
@@ -72,6 +73,7 @@ public class WebSecurityConfig {
 
         http.authenticationProvider(authenticationProvider());
         http.addFilterBefore(authenticationJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class);
+        http.headers(headers -> headers.frameOptions(frameOptions -> frameOptions.sameOrigin()));
         return http.build();
 
     }

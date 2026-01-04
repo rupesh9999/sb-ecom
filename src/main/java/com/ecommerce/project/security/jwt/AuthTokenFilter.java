@@ -31,6 +31,19 @@ public class AuthTokenFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
         logger.debug("AuthTokenFilter called for URI: {}", request.getRequestURI());
+
+        // ============================================================
+        // SECURITY BYPASSED FOR TESTING
+        // All JWT/Bearer token authentication logic is disabled below
+        // ============================================================
+
+        /*
+        // ORIGINAL JWT AUTHENTICATION LOGIC (BYPASSED):
+        // 1. JWT Bearer Token Logic: Extracts token from "Authorization: Bearer <token>" header
+        // 2. JWT Cookie Logic: Falls back to reading JWT from cookies if header is absent
+        // 3. Token Validation: Validates JWT signature and expiration using JwtUtils
+        // 4. User Authentication: Loads user details and sets SecurityContext
+
         try {
             String jwt = parseJwt(request);
             if (jwt != null && jwtUtils.validateJwtToken(jwt)) {
@@ -51,7 +64,9 @@ public class AuthTokenFilter extends OncePerRequestFilter {
         } catch (Exception e) {
             logger.error("Cannot set user authentication: {}", e);
         }
+        */
 
+        // Simply pass the request through without any authentication checks
         filterChain.doFilter(request, response);
     }
 

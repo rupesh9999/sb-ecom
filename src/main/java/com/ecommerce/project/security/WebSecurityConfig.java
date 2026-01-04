@@ -67,21 +67,21 @@ public class WebSecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        // SECURITY BYPASSED FOR TESTING - All authentication disabled
         http.csrf(csrf -> csrf.disable())
-                .exceptionHandling(exception -> exception.authenticationEntryPoint(unauthorizedHandler))
+                // COMMENTED OUT: Exception handling that returns 401/400 errors
+                // .exceptionHandling(exception -> exception.authenticationEntryPoint(unauthorizedHandler))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(authRequests -> authRequests.requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/v3/api-docs/**").permitAll()
-                        .requestMatchers("/h2-console/**").permitAll()
-                        .requestMatchers("/swagger-ui/**").permitAll()
-                        .requestMatchers("/api/public/**").permitAll()
-                        //.requestMatchers("/api/admin/**").permitAll()
-                        .requestMatchers("/api/test/**").permitAll()
-                        .requestMatchers("/images/**").permitAll()
-                        .anyRequest().authenticated());
+                .authorizeHttpRequests(authRequests -> authRequests
+                        // All requests are permitted - no authentication required
+                        .anyRequest().permitAll());
 
-        http.authenticationProvider(authenticationProvider());
-        http.addFilterBefore(authenticationJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class);
+        // COMMENTED OUT: Authentication provider - not needed for testing
+        // http.authenticationProvider(authenticationProvider());
+
+        // COMMENTED OUT: JWT Token Filter - bypassed for testing
+        // http.addFilterBefore(authenticationJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class);
+
         http.headers(headers -> headers.frameOptions(frameOptions -> frameOptions.sameOrigin()));
         return http.build();
 

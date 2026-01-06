@@ -3,13 +3,19 @@ package com.ecommerce.project.service;
 import com.ecommerce.project.exceptions.APIException;
 import com.ecommerce.project.exceptions.ResourceNotFoundException;
 import com.ecommerce.project.model.Cart;
+import com.ecommerce.project.model.CartItem;
 import com.ecommerce.project.model.Product;
 import com.ecommerce.project.payload.CartDTO;
+import com.ecommerce.project.payload.ProductDTO;
 import com.ecommerce.project.repositories.CartItemRepository;
 import com.ecommerce.project.repositories.CartRepository;
 import com.ecommerce.project.repository.ProductRepository;
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.stream.Stream;
 
 
 @Service
@@ -28,6 +34,9 @@ public class CartServiceImpl  implements CartService{
     @Autowired
     private CartItemRepository cartItemRepository;
 
+    @Autowired
+    private ModelMapper modelMapper;
+
 
     @Override
     public CartDTO addProductToCart(Long productId, Integer quantity) {
@@ -45,9 +54,42 @@ public class CartServiceImpl  implements CartService{
         if (product.getQuantity() == 0) {
             throw new APIException("Product" + product.getProductName() + "is out of stock");
         }
-        // Create Cart iTEM
-        // sAVE CART iTEM
-        // rETURN Updated cart
+
+        if (product.getQuantity() < quantity) {
+              throw new APIException("Please, make a n order of the " + product.getProductName() + " less than or equal to quantity" +  product.getQuantity());
+        }
+
+        CartItem newCartItem = new CartItem();
+
+        newCartItem.setCart(cart);
+        newCartItem.setProduct(product);
+        newCartItem.setQuantity(quantity);
+        newCartItem.setDiscount(product.getDiscount());
+        newCartItem.setProductPrice(product.getSpecialPrice());
+
+        cartItemRepository.save(newCartItem);
+
+        product.setQuantity(product.getQuantity());
+
+        cart.setTotalPrice(cart.getTotalPrice() + (product.getSpecialPrice() * quantity));
+        cartRepository.save(cart);
+        productRepository.save(product);
+
+        CartDTO cartDTO = modelMapper.map(cart, CartDTO.class);
+
+        List<CartItem> cartItems = cart.getCartItems();
+
+        Stream<ProductDTO> productDTOStream = cartItems.stream().map(item -> {
+            ProductDTO map = modelMapper.map(item.getProduct(), ProductDTO.class);
+            map.setQuantity(item.getQuantity());
+            map.setDiscount(item.getDiscount());
+            return map;
+        });
+
+        cartDTO.setProducts(productDTOStream.toList());
+
+        return cartDTO;
+
         return null;
     }
 

@@ -10,6 +10,7 @@ import com.ecommerce.project.payload.ProductDTO;
 import com.ecommerce.project.repositories.CartItemRepository;
 import com.ecommerce.project.repositories.CartRepository;
 import com.ecommerce.project.repository.ProductRepository;
+import com.ecommerce.project.util.AuthUtil;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -20,13 +21,12 @@ import java.util.stream.Stream;
 
 @Service
 public class CartServiceImpl  implements CartService{
-    private final CartRepository cartRepository;
 
     @Autowired
     CartRepository cartRepository;
 
     @Autowired
-    AuthUtil authUtil;
+    private AuthUtil authUtil;
 
     @Autowired
     ProductRepository productRepository;
@@ -43,7 +43,7 @@ public class CartServiceImpl  implements CartService{
         Cart cart = createCart();
 
         Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new ResourceNotFoundException("Product", "productId", productId"));
+                .orElseThrow(() -> new ResourceNotFoundException("Product", "productId", productId));
 
         CartItem cartItem = cartItemRepository.findCartItemByProductIdAndCartId(cart.getCartId(), productId);
 
@@ -72,6 +72,10 @@ public class CartServiceImpl  implements CartService{
         product.setQuantity(product.getQuantity());
 
         cart.setTotalPrice(cart.getTotalPrice() + (product.getSpecialPrice() * quantity));
+        
+        // Explicitly add the new item to the cart's list so it appears in the response
+        cart.getCartItems().add(newCartItem);
+
         cartRepository.save(cart);
         productRepository.save(product);
 
@@ -89,8 +93,6 @@ public class CartServiceImpl  implements CartService{
         cartDTO.setProducts(productDTOStream.toList());
 
         return cartDTO;
-
-        return null;
     }
 
     private Cart createCart(){
